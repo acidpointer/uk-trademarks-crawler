@@ -29,8 +29,6 @@ RUN apt-get update && apt-get install -y \
     xvfb \
     sudo
 
-COPY entrypoint.sh /entrypoint.sh
-
 WORKDIR /app
 
 RUN npm install -g pnpm
