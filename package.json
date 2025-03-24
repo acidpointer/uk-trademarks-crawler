@@ -1,0 +1,36 @@
+{
+  "name": "uk-trademarks-crawl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "run": "tsx ./src/main.ts | pino-pretty",
+    "prod": "xvfb-run pnpm run",
+    "in-chrome": "patchright install chrome",
+    "in-chromium": "patchright install chromium"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.6.3",
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@hono/swagger-ui": "^0.5.1",
+    "@hono/zod-openapi": "^0.19.2",
+    "@hono/zod-validator": "^0.4.3",
+    "dayjs": "^1.11.13",
+    "hono": "^4.7.5",
+    "hono-pino": "^0.8.0",
+    "p-queue": "^8.1.0",
+    "patchright": "^1.50.1",
+    "pino": "^9.6.0",
+    "pino-pretty": "^13.0.0",
+    "zod": "^3.24.2"
+  }
+}
