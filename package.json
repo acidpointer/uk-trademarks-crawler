@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "run": "tsx ./src/main.ts | pino-pretty",
-    "prod": "xvfb-run pnpm run",
+    "main": "tsx ./src/main.ts | pino-pretty",
+    "prod": "xvfb-run pnpm main",
     "in-chrome": "patchright install chrome",
     "in-chromium": "patchright install chromium"
   },
