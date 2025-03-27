@@ -105,11 +105,6 @@ async function submitSearchForm(page: Page): Promise<void> {
       throw error;
     }
     
-    const hasNoResults = await page.isVisible('text="No trade marks matching your search criteria were found"');
-    if (hasNoResults) {
-      throw new Error('No trade marks matching your search criteria were found');
-    }
-    
     throw new Error(`Form submission failed: ${error.message}`);
   }
 }
