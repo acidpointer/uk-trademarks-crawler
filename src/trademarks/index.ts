@@ -70,39 +70,87 @@ async function setResultsPerPage(page: Page, count: number): Promise<void> {
   await page.selectOption('select[name="pageSize"]', count.toString());
 }
 
+// async function submitSearchForm(page: Page): Promise<void> {
+//   await page.click('button#button[type="submit"]');
+  
+//   try {
+//     await Promise.race([
+//       page.waitForURL(/page\/Results/, { timeout: 30000 }),
+//       page.waitForSelector('.error-summary, .validation-summary-errors', { 
+//         state: 'visible', 
+//         timeout: 30000 
+//       })
+//     ]);
+    
+//     const errorVisible = await page.isVisible('.error-summary, .validation-summary-errors');
+    
+//     if (errorVisible) {
+//       const errorText = await page.textContent('.error-summary, .validation-summary-errors');
+//       throw new Error(`Search criteria error: ${errorText?.trim()}`);
+//     }
+    
+//     const noResultsVisible = await page.isVisible('text="No trade marks matching your search criteria were found"');
+    
+//     if (noResultsVisible) {
+//       throw new Error('No trade marks matching your search criteria were found');
+//     }
+    
+//     await page.waitForSelector(".search-results", {
+//       state: "visible",
+//       timeout: 5000,
+//     });
+//   } catch (error) {
+//     if (error.message.includes('Search criteria error:') || 
+//         error.message.includes('No trade marks matching')) {
+//       throw error;
+//     }
+    
+//     throw new Error(`Form submission failed: ${error.message}`);
+//   }
+// }
+
 async function submitSearchForm(page: Page): Promise<void> {
   await page.click('button#button[type="submit"]');
   
   try {
     await Promise.race([
       page.waitForURL(/page\/Results/, { timeout: 30000 }),
-      page.waitForSelector('.error-summary, .validation-summary-errors', { 
+      page.locator('.error-summary, .validation-summary-errors').waitFor({ 
         state: 'visible', 
         timeout: 30000 
       })
     ]);
     
-    const errorVisible = await page.isVisible('.error-summary, .validation-summary-errors');
+    const errorLocator = page.locator('.error-summary, .validation-summary-errors');
+    const errorCount = await errorLocator.count();
     
-    if (errorVisible) {
-      const errorText = await page.textContent('.error-summary, .validation-summary-errors');
+    if (errorCount > 0) {
+      const errorText = await errorLocator.textContent();
       throw new Error(`Search criteria error: ${errorText?.trim()}`);
     }
     
-    const noResultsVisible = await page.isVisible('text="No trade marks matching your search criteria were found"');
+    const noResultsLocator = page.locator('text="No trade marks matching your search criteria were found"');
+    const noResultsCount = await noResultsLocator.count();
     
-    if (noResultsVisible) {
+    if (noResultsCount > 0) {
       throw new Error('No trade marks matching your search criteria were found');
     }
     
-    await page.waitForSelector(".search-results", {
+    await page.locator(".search-results").first().waitFor({
       state: "visible",
-      timeout: 5000,
+      timeout: 5000
     });
   } catch (error) {
     if (error.message.includes('Search criteria error:') || 
         error.message.includes('No trade marks matching')) {
       throw error;
+    }
+    
+    const noResultsLocator = page.locator('text="No trade marks matching your search criteria were found"');
+    const noResultsCount = await noResultsLocator.count();
+    
+    if (noResultsCount > 0) {
+      throw new Error('No trade marks matching your search criteria were found');
     }
     
     throw new Error(`Form submission failed: ${error.message}`);
