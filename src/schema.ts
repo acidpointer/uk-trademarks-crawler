@@ -38,7 +38,7 @@ export const SearchQuerySchema = z.object({
   classes: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(",") : [])),
+    .transform((val) => (val ? val.split(",").map((classId: string) => classId.trim()) : [])),
   fromDate: z
     .string()
     .optional()
@@ -62,6 +62,11 @@ export const TrademarkSchema = z.object({
   fileDate: z.string(),
   classes: z.string(),
 });
+
+export const TrademarkClassesSchema = z.array(z.object({
+  id: z.string(),
+  name: z.string(),
+}));
 
 export const SearchResponseSchema = z.object({
   results: z.array(TrademarkSchema),

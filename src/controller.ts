@@ -2,7 +2,7 @@ import { PinoLogger } from "hono-pino";
 import PQueue from "p-queue";
 import { browser } from "./browser";
 import { SearchQuerySchema } from "./schema";
-import { performTrademarkSearch } from "./trademarks";
+import { getTrademarkClasses, performTrademarkSearch } from "./trademarks";
 import { TRADEMARKS_URL } from "./constants/trademarks.const";
 import { searchQueue } from "./queues";
 import { Page } from "patchright";
@@ -71,7 +71,7 @@ searchQueue.on("next", () => {
   logger.info(`(Queue) Task completed. Remaining: ${searchQueue.size}`);
 });
 
-export const trademarkController = async (c) => {
+export const trademarkSearch = async (c) => {
   try {
     const { logger } = c.var as { logger: PinoLogger };
 
@@ -106,47 +106,72 @@ export const trademarkController = async (c) => {
 
     await page.goto(TRADEMARKS_URL);
 
-    /*
-    const results = await performTrademarkSearch(
-      page,
-      words,
-      fromDate,
-      toDate,
-      wordMatchType,
-      type,
-      status,
-      perPage,
-      classes
-    );
-    */
-
-    const results = await queuedTrademarkSearch(
-      page,
-      words,
-      fromDate,
-      toDate,
-      wordMatchType,
-      type,
-      status,
-      perPage,
-      classes
-    );
-
-    await page.close();
-
-    return c.json({
-      results,
-      meta: {
-        count: Array.isArray(results) ? results.length : 0,
-        searchWords: words,
-        searchType: type,
-        legalStatus: status,
-        resultsPerPage: perPage,
-        classIds: classes,
+    try {
+      const results = await queuedTrademarkSearch(
+        page,
+        words,
         fromDate,
         toDate,
+        wordMatchType,
+        type,
+        status,
+        perPage,
+        classes
+      );
+
+      await page.close();
+
+      return c.json({
+        results,
+        meta: {
+          count: Array.isArray(results) ? results.length : 0,
+          searchWords: words,
+          searchType: type,
+          legalStatus: status,
+          resultsPerPage: perPage,
+          classIds: classes,
+          fromDate,
+          toDate,
+        },
+      });
+    } catch (err) {
+      await page.close();
+
+      throw err;
+    }    
+  } catch (err) {
+    return c.json(
+      {
+        error: "Internal server error",
+        message: err.message,
       },
-    });
+      500
+    );
+  }
+};
+
+export const trademarkClasses = async (c) => {
+  try {
+    const page = await browser.newPage();
+
+    await page.goto(TRADEMARKS_URL);
+
+    try {
+      const results = await getTrademarkClasses(page);
+      await page.close();
+
+      return c.json({
+        results,
+        meta: {
+          count: Array.isArray(results) ? results.length : 0,
+        },
+      });
+    } catch (err) {
+      await page.close();
+
+      throw err;
+    }
+    
   } catch (err) {
     return c.json(
       {

@@ -25,7 +25,9 @@ export interface SearchOption {
   selected?: boolean;
 }
 
-export interface ClassOption {
-  value: string;
-  text: string;
+export type TrademarkClassID = string;
+
+export interface TrademarkClass {
+  id: TrademarkClassID;
+  name: string;
 }

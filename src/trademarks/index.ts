@@ -1,11 +1,17 @@
 import { Page } from "patchright";
-import { TRADEMARKS_URL } from "../constants/trademarks.const";
+import {
+  DEFAULT_TRADEMARK_CLASSES,
+  TRADEMARKS_URL,
+} from "../constants/trademarks.const";
 import {
   Trademark,
+  TrademarkClass,
+  TrademarkClassID,
   TrademarksLegalStatus,
   TrademarksSearchType,
   TrademarksWordSearchMatchType,
 } from "../types/trademarks.types";
+import logger from "../logger";
 
 async function setSearchType(
   page: Page,
@@ -16,18 +22,6 @@ async function setSearchType(
 
 async function setSearchWords(page: Page, words: Array<string>): Promise<void> {
   await page.fill('input[name="wordSearchPhrase"]', words.join(" "));
-}
-
-async function selectClassDirect(page: Page, value: string): Promise<void> {
-  // This directly sets the value on the underlying select element
-  // useful for headless testing where the Chosen UI might be problematic
-  await page.selectOption("select.chosen-select", value);
-
-  // Trigger the chosen:updated event to sync the UI
-  await page.evaluate(() => {
-    // @ts-ignore - jQuery is available on the page
-    $(".chosen-select").trigger("chosen:updated");
-  });
 }
 
 const normalizeStringifiedNumber = (data: string) => {
@@ -77,20 +71,45 @@ async function setResultsPerPage(page: Page, count: number): Promise<void> {
 }
 
 async function submitSearchForm(page: Page): Promise<void> {
+  await page.click('button#button[type="submit"]');
+  
   try {
-    await Promise.all([
-      page.waitForURL(/page\/Results/, {
-        waitUntil: "domcontentloaded",
-        timeout: 30000,
-      }),
-      page.click('button#button[type="submit"]'),
+    await Promise.race([
+      page.waitForURL(/page\/Results/, { timeout: 30000 }),
+      page.waitForSelector('.error-summary, .validation-summary-errors', { 
+        state: 'visible', 
+        timeout: 30000 
+      })
     ]);
-
+    
+    const errorVisible = await page.isVisible('.error-summary, .validation-summary-errors');
+    
+    if (errorVisible) {
+      const errorText = await page.textContent('.error-summary, .validation-summary-errors');
+      throw new Error(`Search criteria error: ${errorText?.trim()}`);
+    }
+    
+    const noResultsVisible = await page.isVisible('text="No trade marks matching your search criteria were found"');
+    
+    if (noResultsVisible) {
+      throw new Error('No trade marks matching your search criteria were found');
+    }
+    
     await page.waitForSelector(".search-results", {
       state: "visible",
       timeout: 5000,
     });
   } catch (error) {
+    if (error.message.includes('Search criteria error:') || 
+        error.message.includes('No trade marks matching')) {
+      throw error;
+    }
+    
+    const hasNoResults = await page.isVisible('text="No trade marks matching your search criteria were found"');
+    if (hasNoResults) {
+      throw new Error('No trade marks matching your search criteria were found');
+    }
+    
     throw new Error(`Form submission failed: ${error.message}`);
   }
 }
@@ -222,6 +241,75 @@ async function setWordSearchMatchType(
   }
 }
 
+async function fetchAvailableClasses(page: Page): Promise<TrademarkClass[]> {
+  try {
+    return await page.$$eval("select.chosen-select option", (options) => {
+      return options
+        .filter((option) => (option as HTMLOptionElement).value)
+        .map((option) => ({
+          id: (option as HTMLOptionElement).value,
+          name: option.textContent?.trim() || "",
+        }));
+    });
+  } catch (err) {
+    logger.error(
+      `(fetchAvailableClasses) Cant fetch Trademarks Classes: ${err?.message} --\n${err?.stack}`
+    );
+    return [];
+  }
+}
+
+export async function getTrademarkClasses(
+  page: Page
+): Promise<Array<TrademarkClass>> {
+  const pageClasses = await fetchAvailableClasses(page);
+  return pageClasses.length > 0 ? pageClasses : DEFAULT_TRADEMARK_CLASSES;
+}
+
+async function selectTrademarkClasses(page: Page, classIds: string[]): Promise<void> {
+  if (!classIds || classIds.length === 0) return;
+  
+  await page.click("#clearAll");
+  
+  const actuallySelected = await page.evaluate((ids) => {
+    const select = document.querySelector('select.chosen-select') as HTMLSelectElement;
+    if (!select) return [];
+    
+    const selectedIds = [];
+    
+    for (const option of Array.from(select.options)) {
+      option.selected = false;
+    }
+    
+    for (const id of ids) {
+      for (const option of Array.from(select.options)) {
+        if (option.value === id) {
+          option.selected = true;
+          selectedIds.push(id);
+          break;
+        }
+      }
+    }
+    
+    select.dispatchEvent(new Event('change'));
+    
+    // @ts-ignore - jQuery is available on the page
+    if (typeof $ !== 'undefined') {
+      // @ts-ignore
+      $(".chosen-select").trigger("chosen:updated");
+    }
+    
+    return selectedIds;
+  }, classIds);
+    
+  if (actuallySelected.length > 0) {
+    await page.waitForSelector('.chosen-choices .search-choice', { 
+      state: 'visible',
+      timeout: 3000
+    });
+  }
+}
+
 export async function performTrademarkSearch(
   page: Page,
   searchWords: Array<string>,
@@ -231,7 +319,7 @@ export async function performTrademarkSearch(
   searchType: TrademarksSearchType = "EXACT",
   legalStatus: TrademarksLegalStatus = "ALLLEGALSTATUSES",
   resultsPerPage: number = 10,
-  classIds: string[] = []
+  classIds: Array<TrademarkClassID> = []
 ): Promise<Array<Trademark>> {
   if (!page.url().includes("ipo-tmtext")) {
     await page.goto(TRADEMARKS_URL);
@@ -241,9 +329,7 @@ export async function performTrademarkSearch(
   await setSearchType(page, searchType);
   await setSearchWords(page, searchWords);
 
-  for (const classId of classIds) {
-    await selectClassDirect(page, classId);
-  }
+  await selectTrademarkClasses(page, classIds);
 
   await setFiledBetweenDates(page, fromDate, toDate);
   await setLegalStatus(page, legalStatus);

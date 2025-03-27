@@ -2,7 +2,7 @@ import { cors } from "hono/cors";
 import { swaggerUI } from "@hono/swagger-ui";
 import { serve } from "@hono/node-server";
 import { browser } from "./browser";
-import { trademarkController } from "./controller";
+import { trademarkClasses, trademarkSearch } from "./controller";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
 import { PinoLogger, pinoLogger } from "hono-pino";
 
@@ -10,6 +10,7 @@ import {
   ErrorResponseSchema,
   SearchQuerySchema,
   SearchResponseSchema,
+  TrademarkClassesSchema,
 } from "./schema";
 import { searchQueue } from "./queues";
 import logger from "./logger";
@@ -70,7 +71,43 @@ app.openapi(
       },
     },
   }),
-  trademarkController
+  trademarkSearch
+);
+
+app.openapi(
+  createRoute({
+    method: "get",
+    path: "/classes",
+    summary: "Get available trademarks classes",
+    description: "Get available trademarks classes",
+    responses: {
+      200: {
+        description: "Successfully fetched classes",
+        content: {
+          "application/json": {
+            schema: TrademarkClassesSchema,
+          },
+        },
+      },
+      400: {
+        description: "Bad Request - Invalid parameters",
+        content: {
+          "application/json": {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+      500: {
+        description: "Internal Server Error",
+        content: {
+          "application/json": {
+            schema: ErrorResponseSchema,
+          },
+        },
+      },
+    },
+  }),
+  trademarkClasses
 );
 
 const openAPISchema = {
