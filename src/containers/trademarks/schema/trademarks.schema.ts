@@ -5,8 +5,8 @@ import customParseFormat from "dayjs/plugin/customParseFormat.js";
 dayjs.extend(customParseFormat);
 
 export const TrademarksWordSearchMatchTypeEnum = z.enum([
-    'ALLWORDS',
-    'ANYWORDS',
+  "ALLWORDS",
+  "ANYWORDS",
 ]);
 
 export const TrademarksSearchTypeEnum = z.enum([
@@ -21,6 +21,35 @@ export const TrademarksLegalStatusEnum = z.enum([
   "LIVELEGALSTATUS",
   "DEADLEGALSTATUS",
 ]);
+
+export const TrademarkSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  markText: z.string(),
+  fileDate: z.string(),
+  classes: z.string(),
+});
+
+export const TrademarkClassesSchema = z.array(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+  })
+);
+
+export const SearchResponseSchema = z.object({
+  results: z.array(TrademarkSchema),
+  meta: z.object({
+    count: z.number(),
+    searchWords: z.array(z.string()),
+    searchType: TrademarksSearchTypeEnum,
+    legalStatus: TrademarksLegalStatusEnum,
+    resultsPerPage: z.number(),
+    classIds: z.array(z.string()),
+    fromDate: z.date().optional(),
+    toDate: z.date().optional(),
+  }),
+});
 
 export const SearchQuerySchema = z.object({
   words: z
@@ -38,7 +67,9 @@ export const SearchQuerySchema = z.object({
   classes: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(",").map((classId: string) => classId.trim()) : [])),
+    .transform((val) =>
+      val ? val.split(",").map((classId: string) => classId.trim()) : []
+    ),
   fromDate: z
     .string()
     .optional()
@@ -53,37 +84,4 @@ export const SearchQuerySchema = z.object({
       message: "Invalid date format. Use DD-MM-YYYY",
     })
     .transform((val) => (val ? dayjs(val, "DD-MM-YYYY").toDate() : undefined)),
-});
-
-export const TrademarkSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  markText: z.string(),
-  fileDate: z.string(),
-  classes: z.string(),
-});
-
-export const TrademarkClassesSchema = z.array(z.object({
-  id: z.string(),
-  name: z.string(),
-}));
-
-export const SearchResponseSchema = z.object({
-  results: z.array(TrademarkSchema),
-  meta: z.object({
-    count: z.number(),
-    searchWords: z.array(z.string()),
-    searchType: TrademarksSearchTypeEnum,
-    legalStatus: TrademarksLegalStatusEnum,
-    resultsPerPage: z.number(),
-    classIds: z.array(z.string()),
-    fromDate: z.date().optional(),
-    toDate: z.date().optional(),
-  }),
-});
-
-export const ErrorResponseSchema = z.object({
-  error: z.string(),
-  message: z.string().optional(),
-  details: z.any().optional(),
 });

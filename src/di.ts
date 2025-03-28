@@ -1,5 +1,3 @@
-import "reflect-metadata/lite";
-
 export interface InitializableProvider {
   onInit: () => Promise<void>;
 }
@@ -51,6 +49,17 @@ export interface ContainerMetadata {
   containers: Map<string, Class>;
 }
 
+export const getMeta = <T = {}>(c: Class | ClassDecoratorContext): T => {
+  return { ...c[Object.getOwnPropertySymbols(c)[0]] } as T;
+};
+
+export const setMeta = (
+  c: ClassDecoratorContext,
+  metadata: Record<string, any>
+) => {
+  Object.keys(metadata).forEach((metadataKey: string) => c.metadata[metadataKey] = metadata[metadataKey]);
+};
+
 const formatInjectableName = (providerName: string): string => {
   providerName = providerName.trim();
   return providerName.charAt(0).toLowerCase() + providerName.slice(1);
@@ -64,18 +73,11 @@ export const Injectable = (): ProviderDecorator => {
       );
     }
 
-    if (!ctx.metadata) {
-      throw new Error(`This runtime not support decorator metadata!`);
-    }
-
-    ctx.metadata["injectable"] = true;
-    ctx.metadata["injectable_name"] = formatInjectableName(
-      ctx.name || "UNKNOWN"
-    );
-
-    ctx.metadata["injectable_meta"] = {
-      className: ctx.name,
-    };
+    setMeta(ctx, {
+      injectable: true,
+      injectable_name: formatInjectableName(ctx.name || "UNKNOWN"),
+      injectable_meta: { className: ctx.name },
+    });
 
     const resultObj = {
       [value.name]: class extends value {
@@ -153,17 +155,19 @@ export const Container = (params: ContainerParams): ClassDecorator => {
     };
 
     params.containers?.forEach((container: Class) => {
-      if (!container[Symbol.metadata]?.container) {
+      const isContainer = getMeta(container)["container"];
+
+      if (!isContainer) {
         throw new Error(
           `Class ${container.name} is not @Container !  (${ctx.name})`
         );
       }
 
-      const containerMeta = container[Symbol.metadata]?.container_meta as {
+      const containerMeta: {
         instances: Map<string, object>;
         providers: Map<string, Class>;
         values: Map<string, unknown>;
-      };
+      } = getMeta(container)["container_meta"];
 
       const containerInstances = containerMeta?.instances;
       const containerProviders = containerMeta?.providers;
@@ -183,14 +187,15 @@ export const Container = (params: ContainerParams): ClassDecorator => {
     });
 
     params.providers?.forEach((provider: Class) => {
-      if (!provider[Symbol.metadata]?.injectable) {
+      const isInjectable = getMeta(provider)["injectable"];
+
+      if (!isInjectable) {
         throw new Error(
           `Dependency ${provider.name} should be @Injectable  (${ctx.name})`
         );
       }
 
-      const injectableName: string = provider[Symbol.metadata]
-        ?.injectable_name as string;
+      const injectableName: string = getMeta(provider)["injectable_name"];
 
       if (!providers.has(injectableName)) {
         providers.set(injectableName, provider);
@@ -239,30 +244,31 @@ export const Container = (params: ContainerParams): ClassDecorator => {
       instantiateProvider(injectableName, proxyHandler, provider);
     });
 
-    ctx.metadata["container"] = true;
-    ctx.metadata["container_meta"] = { instances, providers, values };
+    setMeta(ctx, {
+      container: true,
+      container_meta: { instances, providers, values },
+      container_reg_fn: async () => {
+        for (const [_, instance] of instances) {
+          var regMethod = (instance as { __register: () => Promise<void> })
+            ?.__register;
 
-    ctx.metadata["container_reg_fn"] = async () => {
-      for (const [_, instance] of instances) {
-        var regMethod = (instance as { __register: () => Promise<void> })
-          ?.__register;
-
-        if (regMethod && typeof regMethod === "function") {
-          await regMethod.apply(instance);
+          if (regMethod && typeof regMethod === "function") {
+            await regMethod.apply(instance);
+          }
         }
-      }
-    };
+      },
+      container_shutdown_fn: async () => {
+        for (const [_, instance] of instances) {
+          const shutdownMethod = (
+            instance as { __shutdown: () => Promise<void> }
+          )?.__shutdown;
 
-    ctx.metadata["container_shutdown_fn"] = async () => {
-      for (const [_, instance] of instances) {
-        var shutdownMethod = (instance as { __shutdown: () => Promise<void> })
-          ?.__shutdown;
-
-        if (shutdownMethod && typeof shutdownMethod === "function") {
-          await shutdownMethod.apply(instance);
+          if (shutdownMethod && typeof shutdownMethod === "function") {
+            await shutdownMethod.apply(instance);
+          }
         }
-      }
-    };
+      },
+    });
 
     const resultObj = {
       [value.name]: class extends value {
@@ -273,9 +279,8 @@ export const Container = (params: ContainerParams): ClassDecorator => {
         static resolveProvider<T extends Class>(
           provider: Class
         ): T | undefined {
-          const isInjectable = provider[Symbol.metadata]?.injectable as boolean;
-          const injectableName: string = provider[Symbol.metadata]
-            ?.injectable_name as string;
+          const isInjectable: boolean = getMeta(ctx)["injectable"];
+          const injectableName: string = getMeta(ctx)["injectable_name"];
 
           if (provider.name && isInjectable) {
             if (instances.has(injectableName)) {
@@ -294,14 +299,15 @@ export const Container = (params: ContainerParams): ClassDecorator => {
   };
 };
 export const registerContainer = async (container: Class) => {
-  if (!container[Symbol.metadata]?.container) {
+  const isContainer = getMeta(container)["container"];
+
+  if (!isContainer) {
     throw new Error(
       `registerContainer error! ${container?.name} is not @Container()!`
     );
   }
 
-  const regFn = container[Symbol.metadata]
-    ?.container_reg_fn as () => Promise<void>;
+  const regFn: () => Promise<void> = getMeta(container)["container_reg_fn"];
 
   if (regFn && typeof regFn === "function") {
     await regFn();
@@ -309,14 +315,15 @@ export const registerContainer = async (container: Class) => {
 };
 
 export const shutdownContainer = async (container: Class) => {
-  if (!container[Symbol.metadata]?.container) {
+  const isContainer = getMeta(container)["container"];
+
+  if (!isContainer) {
     throw new Error(
       `shutdownContainer error! ${container?.name} is not @Container()!`
     );
   }
 
-  const shutdownFn = container[Symbol.metadata]
-    ?.container_shutdown_fn as () => Promise<void>;
+  const shutdownFn: () => Promise<void> = getMeta(container)["container_shutdown_fn"];
 
   if (shutdownFn && typeof shutdownFn === "function") {
     await shutdownFn();
