@@ -33,17 +33,14 @@ importers:
         specifier: ^8.1.0
         version: 8.1.0
       patchright:
-        specifier: ^1.50.1
-        version: 1.50.1
+        specifier: ^1.52.5
+        version: 1.52.5
       pino:
         specifier: ^9.6.0
         version: 9.6.0
       pino-pretty:
         specifier: ^13.0.0
         version: 13.0.0
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
       zod:
         specifier: ^3.24.2
         version: 3.24.2
@@ -331,13 +328,13 @@ packages:
     resolution: {integrity: sha512-MyIV3ZA/PmyBN/ud8vV9XzwTrNtR4jFrObymZYnZqMmW0zA8Z17vnT0rBgFE/TlohB+YCHqXMgZzb3Csp49vqg==}
     engines: {node: '>=14.16'}
 
-  patchright-core@1.50.1:
-    resolution: {integrity: sha512-mjGUc+o/NQxZM3EGqR3SauvdfWCa503jht8K0Cqhh+0xmxtiZdT3jrFD2bEnwsxNGMDOwkdI5tSgZ/Tf8cedkA==}
+  patchright-core@1.52.5:
+    resolution: {integrity: sha512-8rnLVEK9jDZWzFPy2hCQrp4xhU7zgE8IqseZyjGkgxf+jpAWTuGNgIAlcsKZMfQrDL8j1mZgRIGNAQT00nk6QA==}
     engines: {node: '>=18'}
     hasBin: true
 
-  patchright@1.50.1:
-    resolution: {integrity: sha512-e9vmsD3Y5TJh1Wkl5kRFGl51+JjOyDGmyBhv5+7w1IY4obTDV1zDTQZ59k06I95n4FDQuj5Fi4YkAy0ZYwYcOg==}
+  patchright@1.52.5:
+    resolution: {integrity: sha512-wmRpsF9n02j0S+YDk0U3ouuWipHbUowwxbf/4K4G9ng311vvugoo8WndbU/fCsGtme8gYNfcEGcpfF6/L1NXHg==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -367,9 +364,6 @@ packages:
   real-require@0.2.0:
     resolution: {integrity: sha512-57frrGM/OCTLqLOAh0mhVA9VBMHd+9U7Zb2THMGdBUoZVOtGbJzjxsYGDJ3A9AYYCP4hn6y1TVbaOfzWtm5GFg==}
     engines: {node: '>= 12.13.0'}
-
-  reflect-metadata@0.2.2:
-    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
 
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
@@ -616,11 +610,11 @@ snapshots:
 
   p-timeout@6.1.4: {}
 
-  patchright-core@1.50.1: {}
+  patchright-core@1.52.5: {}
 
-  patchright@1.50.1:
+  patchright@1.52.5:
     dependencies:
-      patchright-core: 1.50.1
+      patchright-core: 1.52.5
     optionalDependencies:
       fsevents: 2.3.2
 
@@ -670,8 +664,6 @@ snapshots:
   quick-format-unescaped@4.0.4: {}
 
   real-require@0.2.0: {}
-
-  reflect-metadata@0.2.2: {}
 
   resolve-pkg-maps@1.0.0: {}
 

@@ -238,21 +238,40 @@ export class TrademarksProvider {
     page: Page,
     option: TrademarksWordSearchMatchType
   ): Promise<void> {
-    const selector = `input[name="wordSearchMatchType"][value="${option}"]`;
+    await page.waitForSelector('input[name="wordSearchMatchType"]');
 
-    const radioButton = await page.$(selector);
-    if (!radioButton) {
-      throw new Error(`Radio button for option "${option}" not found`);
+    const radioLocator = page.locator(
+      `input[name="wordSearchMatchType"][value="${option}"]`
+    );
+
+    if ((await radioLocator.count()) === 0) {
+      const availableOptions = await page
+        .locator('input[name="wordSearchMatchType"]')
+        .evaluateAll((inputs) =>
+          inputs.map((input) => (input as HTMLInputElement).value)
+        );
+      throw new Error(
+        `Radio button with value "${option}" not found. Available: ${availableOptions.join(
+          ", "
+        )}`
+      );
     }
 
-    await page.click(selector);
+    if (await radioLocator.isVisible()) {
+      await radioLocator.check();
+    } else {
+      const labelText = option === "ALLWORDS" ? "All words" : "Any words";
+      const labelLocator = page.locator(`label:has-text("${labelText}")`);
 
-    const isChecked = await page.$eval(
-      selector,
-      (input) => (input as HTMLInputElement).checked
-    );
-    if (!isChecked) {
-      throw new Error(`Failed to set radio button for "${option}"`);
+      if ((await labelLocator.count()) > 0) {
+        await labelLocator.click();
+      } else {
+        await radioLocator.check({ force: true });
+      }
+    }
+
+    if (!(await radioLocator.isChecked())) {
+      throw new Error(`Failed to check radio button for "${option}"`);
     }
   }
 
